@@ -39,7 +39,7 @@ class FinderHomePage extends StatelessWidget {
         _FinderBanner(
           name: auth.user?.fullName ?? 'Trouveur',
           earnings: stats.earningsTotal,
-          balance: stats.walletBalance,
+          balance: workspace.wallet.balance,
           rating: auth.user?.averageRating ?? 0,
           ratingCount: auth.user?.ratingCount ?? 0,
         ),

@@ -78,7 +78,7 @@ def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "version": settings.app_version,
-        "ai_engine": "deepseek" if deepseek_service.is_available() else "moteur-local",
+        "ai_engine": "ia-nemotron" if deepseek_service.is_available() else "moteur-local",
         "email_delivery": "smtp" if settings.smtp_enabled else "simulation",
         "sms_delivery": "textsoft" if settings.sms_enabled else "simulation",
         "min_reward_amount": settings.min_reward_amount,

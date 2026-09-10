@@ -119,7 +119,7 @@ def overview(
         "escrow_balance": escrow_balance(db),
         "year_revenue": year_revenue,
         "month_revenue": month_revenue,
-        "ai_engine": "deepseek" if settings.deepseek_enabled else "moteur-local",
+        "ai_engine": "ia-nemotron" if settings.deepseek_enabled else "moteur-local",
         "email_delivery": "smtp" if settings.smtp_enabled else "simulation",
         "sms_delivery": "textsoft" if settings.sms_enabled else "simulation",
     }

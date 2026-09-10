@@ -42,7 +42,9 @@ class AdminHomePage extends StatelessWidget {
                 icon: Icons.psychology_outlined,
                 label: 'Moteur IA / Matching',
                 value: overview.aiEngine,
-                active: overview.aiEngine.toLowerCase().contains('deepseek'),
+                active: overview.aiEngine.toLowerCase().contains('nemotron')
+                    || overview.aiEngine.toLowerCase().contains('deepseek')
+                    || overview.aiEngine.toLowerCase().contains('openrouter'),
               ),
               _ServiceChip(
                 icon: Icons.mark_email_read_outlined,

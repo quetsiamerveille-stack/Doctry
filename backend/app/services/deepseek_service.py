@@ -75,6 +75,9 @@ def chat(system_prompt: str, user_prompt: str) -> str:
             headers={
                 "Authorization": f"Bearer {settings.deepseek_api_key}",
                 "Content-Type": "application/json",
+                # En-tetes OpenRouter : identification de l'app appelante
+                "HTTP-Referer": "https://doctry.app",
+                "X-Title": "DOCTRY Document Matching",
             },
             json={
                 "model": settings.deepseek_model,
@@ -88,6 +91,7 @@ def chat(system_prompt: str, user_prompt: str) -> str:
         )
         response.raise_for_status()
         data = response.json()
+        # Format OpenAI-compatible (DeepSeek comme OpenRouter)
         return data["choices"][0]["message"]["content"]
     except (httpx.HTTPError, KeyError, IndexError, ValueError):
         return ""
@@ -108,7 +112,7 @@ def analyze_document(doc_type: str, fields: dict[str, str], ocr_text: str = "") 
     raw = chat("Tu es l'IA documentaire de la plateforme DOCTRY.", prompt)
     parsed = _extract_json(raw)
     if parsed:
-        parsed["engine"] = "deepseek"
+        parsed["engine"] = "ai"
         return parsed
 
     normalized = {
@@ -190,7 +194,7 @@ def compare_documents(left: dict[str, Any], right: dict[str, Any]) -> dict[str, 
     if isinstance(score, (int, float)):
         return {
             "score": max(0.0, min(1.0, float(score))),
-            "reason": str(parsed.get("reason", "Comparaison IA DeepSeek"))[:400],
-            "engine": "deepseek",
+            "reason": str(parsed.get("reason", "Comparaison IA"))[:400],
+            "engine": "ai",
         }
-    return {"score": -1.0, "reason": "", "engine": "deepseek_unavailable"}
+    return {"score": -1.0, "reason": "", "engine": "ai_unavailable"}

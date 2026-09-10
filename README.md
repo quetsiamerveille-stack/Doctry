@@ -2,7 +2,7 @@
 
 Plateforme intelligente de gestion, perte et retrouvaille de documents d'identité.
 
-Application full-stack : **Flutter** (web + mobile) et **FastAPI** (Python), avec moteur de matching IA DeepSeek, QR Code natif, séquestre Mobile Money simulé (Orange Money / MTN MoMo), SMS Textsoft et OTP par email.
+Application full-stack : **Flutter** (web + mobile) et **FastAPI** (Python), avec moteur de matching IA (OpenRouter · NVIDIA Nemotron), QR Code natif, séquestre Mobile Money simulé (Orange Money `#150#` / MTN MoMo `*126#`), SMS Textsoft et OTP par email.
 
 ---
 
@@ -51,7 +51,7 @@ doctry/
 │   │   │   └── media.py                  # QR Code PNG + images (Bearer ou ?token=)
 │   │   └── services/
 │   │       ├── qrcode_service.py         # génération QR (lib Python native qrcode)
-│   │       ├── deepseek_service.py       # analyse documentaire + floutage (API DeepSeek)
+│   │       ├── deepseek_service.py       # analyse documentaire + floutage (API IA OpenRouter/Nemotron)
 │   │       ├── matching_service.py       # comparaison et matching automatique
 │   │       ├── payment_service.py        # séquestre Orange Money / MTN MoMo
 │   │       ├── otp_service.py            # codes OTP
@@ -125,7 +125,7 @@ Variables utiles dans `.env` :
 
 | Variable | Rôle |
 | --- | --- |
-| `DEEPSEEK_API_KEY` | Analyse IA réelle. Vide = moteur heuristique local |
+| `DEEPSEEK_API_KEY` | Clé OpenRouter pour l'IA réelle (`nvidia/nemotron-3-ultra-550b-a55b:free`). Vide = moteur heuristique local |
 | `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` | Envoi réel des OTP par Gmail. Vide = simulation, le code est renvoyé dans `dev_code` |
 | `TEXTSOFT_API_URL` / `TEXTSOFT_API_KEY` | Envoi réel des SMS. Vide = journalisé et consultable dans l'admin |
 | `MIN_REWARD_AMOUNT` | Récompense minimum, 1500 XAF |
@@ -201,7 +201,7 @@ flutter build web  --dart-define=API_BASE_URL=https://api.doctry.app
 
 ### 4.5 Moteur de matching IA
 À chaque déclaration de perte ou de retrouvaille :
-1. DeepSeek analyse le document (texte + visuel) et floute automatiquement les zones sensibles.
+1. L'IA (OpenRouter · NVIDIA Nemotron) analyse le document (texte + visuel) et floute automatiquement les zones sensibles.
 2. Comparaison algorithmique avec l'ensemble des documents en base.
 3. **Positif** : alerte « Document similaire trouvé », notification In-App + SMS Textsoft aux deux parties, mise en relation via le chat interne.
 4. **Négatif** : notification « Aucune correspondance trouvée », statut « En attente ».

@@ -35,7 +35,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 def _delivery_modes() -> tuple[str, str, str]:
     email_mode = "smtp" if settings.smtp_enabled else "simulation"
     sms_mode = "textsoft" if settings.sms_enabled else "simulation"
-    ai_mode = "deepseek" if deepseek_service.is_available() else "moteur-local"
+    ai_mode = "ia-nemotron" if deepseek_service.is_available() else "moteur-local"
     return email_mode, sms_mode, ai_mode
 
 

@@ -36,9 +36,9 @@ class Settings(BaseSettings):
     rating_interval_days: int = 3
 
     deepseek_api_key: str = ""
-    deepseek_base_url: str = "https://api.deepseek.com"
-    deepseek_model: str = "deepseek-chat"
-    deepseek_timeout: int = 45
+    deepseek_base_url: str = "https://openrouter.ai/api/v1"
+    deepseek_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
+    deepseek_timeout: int = 60
     matching_threshold: float = 0.55
 
     smtp_host: str = ""

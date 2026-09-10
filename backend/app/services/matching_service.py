@@ -269,8 +269,8 @@ def score_pair(left: dict[str, Any], right: dict[str, Any]) -> tuple[float, str,
 
     combined = round(0.5 * local + 0.5 * ai_score, 4)
     ai_reason = str(ai.get("reason", "")).strip()
-    merged = f"{reason} | IA DeepSeek : {ai_reason}" if ai_reason else reason
-    return combined, merged[:500], "deepseek"
+    merged = f"{reason} | IA : {ai_reason}" if ai_reason else reason
+    return combined, merged[:500], "ai"
 
 
 def loss_fingerprint(db: Session, loss: LossDeclaration) -> dict[str, Any]:

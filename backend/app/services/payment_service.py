@@ -13,7 +13,7 @@ PROVIDERS = {
     "ORANGE_MONEY": {
         "label": "Orange Money",
         "prefix": "OM",
-        "ussd": "#144#",
+        "ussd": "#150#",
     },
     "MTN_MONEY": {
         "label": "MTN Mobile Money",

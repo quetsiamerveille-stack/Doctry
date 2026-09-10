@@ -65,7 +65,8 @@ class OwnerHomePage extends StatelessWidget {
       children: <Widget>[
         _WelcomeBanner(
           name: auth.user?.fullName ?? 'Propriétaire',
-          balance: stats.walletBalance,
+          balance: workspace.wallet.balance,
+          escrowTotal: stats.escrowTotal,
           onTopUp: () => runTopUpFlow(context),
         ),
         const SizedBox(height: 16),
@@ -74,7 +75,7 @@ class OwnerHomePage extends StatelessWidget {
         SectionCard(
           title: 'Correspondances détectées par l\'IA',
           icon: Icons.psychology_outlined,
-          subtitle: 'Alertes générées par le moteur de matching DeepSeek.',
+          subtitle: 'Alertes générées par le moteur de matching IA.',
           child: matches.isEmpty
               ? const EmptyState(
                   message: 'Aucune correspondance pour le moment. '
@@ -166,15 +167,19 @@ class _WelcomeBanner extends StatelessWidget {
   const _WelcomeBanner({
     required this.name,
     required this.balance,
+    required this.escrowTotal,
     required this.onTopUp,
   });
 
   final String name;
   final double balance;
+  final double escrowTotal;
   final VoidCallback onTopUp;
 
   @override
   Widget build(BuildContext context) {
+    final bool hasEscrow = escrowTotal > 0;
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -201,42 +206,73 @@ class _WelcomeBanner extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          // Carte de solde : le montant occupe l'espace disponible,
+          // le bouton passe sous le montant sur écran étroit.
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: AppColors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppColors.gold.withValues(alpha: 0.6)),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const Icon(Icons.account_balance_wallet_outlined,
-                    color: AppColors.gold, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        Fmt.money(balance),
-                        style: const TextStyle(
-                          color: AppColors.white,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                        ),
+                Row(
+                  children: <Widget>[
+                    const Icon(Icons.account_balance_wallet_outlined,
+                        color: AppColors.gold, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Text(
+                            'Solde du compte DOCTRY',
+                            style: TextStyle(color: AppColors.gold, fontSize: 11),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            Fmt.money(balance),
+                            style: const TextStyle(
+                              color: AppColors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
                       ),
-                      const Text(
-                        'Solde du compte DOCTRY',
-                        style: TextStyle(color: AppColors.gold, fontSize: 11),
+                    ),
+                  ],
+                ),
+                if (hasEscrow) ...<Widget>[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: <Widget>[
+                      const Icon(Icons.lock_outline,
+                          color: AppColors.white, size: 15),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${Fmt.money(escrowTotal)} en séquestre',
+                        style: TextStyle(
+                          color: AppColors.white.withValues(alpha: 0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                DoctryButton(
-                  label: 'Recharger',
-                  icon: Icons.add_card_outlined,
-                  variant: DoctryButtonVariant.gold,
-                  onPressed: onTopUp,
+                ],
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: DoctryButton(
+                    label: 'Recharger le compte',
+                    icon: Icons.add_card_outlined,
+                    variant: DoctryButtonVariant.gold,
+                    onPressed: onTopUp,
+                  ),
                 ),
               ],
             ),

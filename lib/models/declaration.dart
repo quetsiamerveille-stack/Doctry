@@ -179,9 +179,11 @@ class MatchResult {
   final String createdAt;
 
   int get percent => (score * 100).round();
-  String get engineLabel => engine == 'deepseek'
-      ? 'IA DeepSeek'
-      : engine == 'qr'
-          ? 'QR Code'
-          : 'Moteur local';
+  String get engineLabel => engine == 'ai'
+      ? 'Moteur IA'
+      : engine == 'deepseek'
+          ? 'Moteur IA'
+          : engine == 'qr'
+              ? 'QR Code'
+              : 'Moteur local';
 }
