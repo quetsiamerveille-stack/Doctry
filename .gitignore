@@ -46,3 +46,6 @@ app.*.map.json
 
 # Gradle build outputs
 android/build/
+
+# Runtime server state
+.server_pids
