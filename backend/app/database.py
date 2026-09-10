@@ -12,8 +12,11 @@ class Base(DeclarativeBase):
     pass
 
 
+_is_sqlite = settings.resolved_database_url.startswith("sqlite")
+_is_postgres = settings.resolved_database_url.startswith(("postgresql://", "postgres://"))
+
 _connect_args = {}
-if settings.resolved_database_url.startswith("sqlite"):
+if _is_sqlite:
     _connect_args = {"check_same_thread": False}
 
 engine = create_engine(
@@ -23,7 +26,7 @@ engine = create_engine(
     future=True,
 )
 
-if settings.resolved_database_url.startswith("sqlite"):
+if _is_sqlite:
 
     @event.listens_for(engine, "connect")
     def _set_sqlite_pragma(dbapi_connection, connection_record):
