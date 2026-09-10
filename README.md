@@ -229,9 +229,10 @@ cd ..; flutter analyze; flutter test
 | `backend/smoke_test.py` | 102 assertions, 0 échec |
 | `backend/live_check.py` | 52 assertions HTTP réelles, 0 échec |
 | `flutter analyze` | Aucun problème |
-| `flutter test` | 16 tests, 0 échec |
-| `flutter build web --release` | OK |
-| `flutter build apk --debug` | OK |
+| `flutter test` | 17 tests, 0 échec |
+| `flutter build web --release` | OK (24 Mo, `build/web/`) |
+
+> **Note APK** : la compilation Android (`flutter build apk`) nécessite le SDK Android + JDK installés (`ANDROID_HOME`, `JAVA_HOME`). Sur un poste sans SDK, `flutter doctor` signale « Unable to locate Android SDK » ; le build web reste pleinement opérationnel. Le projet est néanmoins configuré pour Android (permissions, `applicationId com.doctry.app`, Gradle 8.14).
 
 Le parcours `live_check.py` couvre de bout en bout : installation de l'admin sans compte par défaut, OTP, inscription des deux rôles, génération et lecture du QR PNG, scan → matching, perte → recharge → séquestre → restitution → libération OTP (commission 250 XAF, net trouveur 4750 XAF pour une récompense de 5000 XAF), chat, notifications, statistiques, notation, blocage/déblocage, finance annuelle/mensuelle/par date, journal SMS et isolation des rôles (401/403).
 
@@ -247,4 +248,31 @@ L'interface s'adapte automatiquement :
 | ≥ 820 px | Tableaux complets | Colonnes réelles |
 | ≥ 900 px (web/tablette) | Rail latéral | Grilles de 4 tuiles |
 
-Les 16 tests Flutter vérifient chaque écran d'authentification et chaque page de tableau de bord à 360×740, 820×1180 et 1440×900 sans aucun débordement de mise en page.
+Les 17 tests Flutter vérifient chaque écran d'authentification et chaque page de tableau de bord à 360×740, 820×1180 et 1440×900 sans aucun débordement de mise en page.
+
+---
+
+## 7. Mise en production
+
+### 7.1 Checklist avant mise en ligne
+
+1. **Clé JWT** : remplacer `JWT_SECRET` dans `backend/.env` par une clé aléatoire longue (`python -c "import secrets; print(secrets.token_hex(32))"`). Ne jamais garder la valeur de développement en production.
+2. **`ENVIRONMENT=production`** : désactive le rechargement à chaud d'uvicorn (`reload=False`).
+3. **CORS** : remplacer `CORS_ORIGINS=*` par la/les URL exactes du frontend (ex. `https://doctry.app`).
+4. **Secrets réels** : renseigner `DEEPSEEK_API_KEY`, `SMTP_*`, `TEXTSOFT_*` pour activer respectivement le matching IA réel, l'envoi OTP par Gmail et les SMS. À vide, tout fonctionne en mode simulation (codes renvoyés dans `dev_code`, SMS journalisés consultables dans l'admin).
+5. **Reverse proxy HTTPS** : servir l'API derrière Nginx/Caddy avec TLS (recommandé pour les apps mobiles ; l'APK autorise le HTTP clair via `usesCleartextTraffic` uniquement pour les phases de test LAN).
+
+### 7.2 Démarrage production
+
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+copy .env.example .env   # puis éditer les valeurs ci-dessus
+python run.py            # uvicorn 0.0.0.0:8000, sans reload en production
+```
+
+Le frontend web compilé (`build/web/`) est statique : le déployer sur n'importe quel hébergeur statique (Nginx, Firebase Hosting, Vercel) en figeant l'URL de l'API :
+
+```powershell
+flutter build web --release --dart-define=API_BASE_URL=https://api.doctry.app
+```
