@@ -71,7 +71,7 @@ class OtpCode(Base):
     email: Mapped[str] = mapped_column(String(255), index=True)
     code: Mapped[str] = mapped_column(String(12))
     purpose: Mapped[str] = mapped_column(String(30), default="login")
-    context_ref: Mapped[str] = mapped_column(String(64), default="")
+    context_ref: Mapped[str] = mapped_column(String(255), default="")
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     consumed: Mapped[bool] = mapped_column(Boolean, default=False)
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
