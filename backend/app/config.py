@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     deepseek_api_key: str = ""
     deepseek_base_url: str = "https://openrouter.ai/api/v1"
     deepseek_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
-    deepseek_timeout: int = 60
+    deepseek_timeout: int = 180
     matching_threshold: float = 0.55
 
     smtp_host: str = ""

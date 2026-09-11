@@ -14,6 +14,7 @@ import 'package:doctry/screens/finder/finder_home_page.dart';
 import 'package:doctry/screens/finder/finder_stats_page.dart';
 import 'package:doctry/screens/install_admin_screen.dart';
 import 'package:doctry/screens/login_screen.dart';
+import 'package:doctry/screens/onboarding_screen.dart';
 import 'package:doctry/screens/otp_screen.dart';
 import 'package:doctry/screens/owner/owner_documents_page.dart';
 import 'package:doctry/screens/owner/owner_home_page.dart';
@@ -162,7 +163,22 @@ void main() {
     testWidgets('le splash affiche la marque DOCTRY', (WidgetTester tester) async {
       await tester.pumpWidget(_wrap(const SplashScreen()));
       expect(find.byType(DoctryLogo), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    });
+
+    testWidgets('l\'onboarding présente les 3 étapes', (WidgetTester tester) async {
+      await tester.pumpWidget(_wrap(const OnboardingScreen()));
+      expect(find.text('Protégez vos documents'), findsOneWidget);
+      expect(find.text('Passer'), findsOneWidget);
+      expect(find.text('Suivant'), findsOneWidget);
+      // Navigation vers la 2e page
+      await tester.tap(find.text('Suivant'));
+      await tester.pumpAndSettle();
+      expect(find.text('Matching IA automatique'), findsOneWidget);
+      // 3e page puis bouton final
+      await tester.tap(find.text('Suivant'));
+      await tester.pumpAndSettle();
+      expect(find.text('Commencer'), findsOneWidget);
     });
 
     testWidgets('la page de connexion propose les deux profils', (WidgetTester tester) async {
