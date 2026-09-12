@@ -1,0 +1,34 @@
+# DOCTRY — Deploiement Render.com
+#
+# Backend FastAPI : base PostgreSQL Supabase + IA OpenRouter (Nemotron)
+# + serveur statique du frontend Flutter web compile (le meme conteneur
+# sert l'API sur /api/* et le frontend sur /).
+
+services:
+  - type: web
+    name: doctry-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: APP_NAME
+        value: DOCTRY API
+      - key: ENVIRONMENT
+        value: production
+      - key: JWT_SECRET
+        generateValue: true          # Render genere une cle aleatoire
+      - key: CORS_ORIGINS
+        value: "*"                   # TODO: remplacer par l'URL Vercel finale
+      - key: DATABASE_URL
+        sync: false                  # a renseigner dans le dashboard (secret)
+      - key: DEEPSEEK_API_KEY
+        sync: false                  # a renseigner dans le dashboard (secret)
+      - key: DEEPSEEK_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: DEEPSEEK_MODEL
+        value: nvidia/nemotron-3-ultra-550b-a55b:free
+      - key: DEEPSEEK_TIMEOUT
+        value: "180"
+      - key: STORAGE_DIR
+        value: /app/storage

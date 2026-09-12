@@ -54,3 +54,9 @@ android/build/
 DOCTRY-v1.0.0.apk
 apk_build.log
 apk_build.exit
+build_apk_online.ps1
+
+# Scripts de build locaux
+build_apk.ps1
+download_gradle.ps1
+install_ndk.ps1
