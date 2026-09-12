@@ -146,7 +146,11 @@ if _WEB_DIR is not None:
     }
 
     @app.get("/{file_path:path}", include_in_schema=False)
-    def spa_fallback(file_path: str) -> FileResponse:
+    def spa_fallback(file_path: str):
+        # 0) Les chemins API inconnus restent des 404 JSON (pas de HTML)
+        if file_path.startswith("api/") or file_path == "api":
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=404, content={"detail": "Route API inconnue"})
         # 1) Fichier reel du build -> servi
         candidate = (_WEB_DIR / file_path).resolve()
         if file_path and candidate.is_file() and _WEB_DIR in candidate.parents:
