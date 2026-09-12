@@ -78,7 +78,11 @@ async def validation_handler(request: Request, exc: RequestValidationError) -> J
 
 
 @app.get("/", tags=["system"])
-def root() -> dict[str, Any]:
+def root() -> Any:
+    # Si le frontend Flutter compile est present, il est servi sur /
+    if _WEB_DIR is not None:
+        from fastapi.responses import FileResponse
+        return FileResponse(_WEB_DIR / "index.html")
     return {
         "name": settings.app_name,
         "version": settings.app_version,
