@@ -31,7 +31,9 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+# Build Flutter : tout est ignore SAUF le web (livre pour le deploiement Render)
+/build/*
+!build/web/
 
 # Symbolication related
 app.*.symbols
@@ -61,3 +63,6 @@ build_apk.ps1
 download_gradle.ps1
 install_ndk.ps1
 DOCTRY-v1.0.0-online.apk
+
+# Exception: le build web Flutter est livre au repo pour le deploiement Render
+!build/web/
