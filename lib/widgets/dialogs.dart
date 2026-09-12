@@ -10,6 +10,7 @@ import '../models/chat.dart';
 import '../providers/auth_provider.dart';
 import '../providers/workspace_provider.dart';
 import 'common.dart';
+import 'user_avatar.dart';
 
 Future<bool> showConfirmDialog(
   BuildContext context, {
@@ -86,7 +87,8 @@ Future<bool> showProfileEditDialog(BuildContext context) async {
       TextEditingController(text: auth.user?.firstName ?? '');
   final TextEditingController lastName = TextEditingController(text: auth.user?.lastName ?? '');
   final TextEditingController email = TextEditingController(text: auth.user?.email ?? '');
-  final TextEditingController password = TextEditingController();
+  final TextEditingController currentPassword = TextEditingController();
+  final TextEditingController newPassword = TextEditingController();
   final TextEditingController phone = TextEditingController(text: auth.user?.phone ?? '');
 
   final bool? result = await showDialog<bool>(
@@ -102,6 +104,48 @@ Future<bool> showProfileEditDialog(BuildContext context) async {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
+                    // --- Photo de profil ---
+                    Center(
+                      child: auth.user == null
+                          ? const SizedBox.shrink()
+                          : UserAvatar(
+                              user: auth.user!,
+                              size: 96,
+                              editBadge: true,
+                              onTap: auth.busy
+                                  ? null
+                                  : () async {
+                                      final PickedMedia? media =
+                                          await MediaPicker.pick(ImageSource.gallery);
+                                      if (media == null) {
+                                        return;
+                                      }
+                                      setState(() {});
+                                      final bool ok = await auth.uploadProfilePhoto(
+                                        bytes: media.bytes,
+                                        filename: media.filename,
+                                        mimeType: media.mimeType,
+                                      );
+                                      if (!stateContext.mounted) {
+                                        return;
+                                      }
+                                      setState(() {});
+                                      if (ok) {
+                                        showDoctrySnackBar(
+                                          stateContext,
+                                          'Photo de profil mise à jour.',
+                                        );
+                                      }
+                                    },
+                            ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Toucher la photo pour la changer',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: lastName,
                       decoration: const InputDecoration(labelText: 'Nom'),
@@ -118,22 +162,41 @@ Future<bool> showProfileEditDialog(BuildContext context) async {
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(labelText: 'Email'),
                       )
-                    else ...<Widget>[
+                    else
                       TextField(
                         controller: phone,
                         keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(labelText: 'Téléphone'),
                       ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: password,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Nouveau mot de passe',
-                          helperText: 'Laisser vide pour conserver le mot de passe actuel',
-                        ),
+                    const Divider(height: 30),
+                    Text(
+                      'Changer le mot de passe',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.darkBlue,
                       ),
-                    ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: currentPassword,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Mot de passe actuel',
+                        prefixIcon: Icon(Icons.lock_outline),
+                        helperText: 'Obligatoire pour modifier le mot de passe',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: newPassword,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Nouveau mot de passe',
+                        prefixIcon: Icon(Icons.key_outlined),
+                        helperText: 'Laisser vide pour conserver le mot de passe actuel',
+                      ),
+                    ),
                     if (auth.error != null) ...<Widget>[
                       const SizedBox(height: 12),
                       Text(
@@ -154,18 +217,30 @@ Future<bool> showProfileEditDialog(BuildContext context) async {
                 onPressed: auth.busy
                     ? null
                     : () async {
+                        // Validation locale : nouveau mot de passe exige l'actuel
+                        if (newPassword.text.trim().isNotEmpty &&
+                            currentPassword.text.trim().isEmpty) {
+                          auth.setValidationError(
+                            'Saisissez votre mot de passe actuel pour le changer.',
+                          );
+                          setState(() {});
+                          return;
+                        }
                         setState(() {});
                         final bool ok = adminMode
                             ? await auth.updateAdminProfile(
                                 firstName: firstName.text.trim(),
                                 lastName: lastName.text.trim(),
                                 email: email.text.trim(),
+                                password: newPassword.text.trim(),
+                                currentPassword: currentPassword.text.trim(),
                               )
                             : await auth.updateProfile(
                                 firstName: firstName.text.trim(),
                                 lastName: lastName.text.trim(),
                                 phone: phone.text.trim(),
-                                password: password.text.trim(),
+                                password: newPassword.text.trim(),
+                                currentPassword: currentPassword.text.trim(),
                               );
                         if (!dialogContext.mounted) {
                           return;
@@ -193,7 +268,8 @@ Future<bool> showProfileEditDialog(BuildContext context) async {
   firstName.dispose();
   lastName.dispose();
   email.dispose();
-  password.dispose();
+  currentPassword.dispose();
+  newPassword.dispose();
   phone.dispose();
   return result ?? false;
 }

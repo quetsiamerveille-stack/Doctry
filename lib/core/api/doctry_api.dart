@@ -129,13 +129,17 @@ class DoctryApi {
     String? firstName,
     String? lastName,
     String? password,
+    String? currentPassword,
     String? phone,
   }) async =>
       Map<String, dynamic>.from(
         await _client.patch('/api/auth/me', body: <String, dynamic>{
           if (firstName != null) 'first_name': firstName,
           if (lastName != null) 'last_name': lastName,
-          if (password != null && password.isNotEmpty) 'password': password,
+          if (password != null && password.isNotEmpty) ...<String, dynamic>{
+            'password': password,
+            'current_password': currentPassword ?? '',
+          },
           if (phone != null) 'phone': phone,
         }) as Map,
       );
@@ -144,13 +148,35 @@ class DoctryApi {
     String? firstName,
     String? lastName,
     String? email,
+    String? password,
+    String? currentPassword,
   }) async =>
       Map<String, dynamic>.from(
         await _client.patch('/api/auth/me/admin-profile', body: <String, dynamic>{
           if (firstName != null) 'first_name': firstName,
           if (lastName != null) 'last_name': lastName,
           if (email != null) 'email': email,
+          if (password != null && password.isNotEmpty) ...<String, dynamic>{
+            'password': password,
+            'current_password': currentPassword ?? '',
+          },
         }) as Map,
+      );
+
+  Future<Map<String, dynamic>> uploadProfilePhoto({
+    required List<int> bytes,
+    required String filename,
+    required String mimeType,
+  }) async =>
+      Map<String, dynamic>.from(
+        await _client.postForm(
+          '/api/auth/me/photo',
+          fields: const <String, String>{},
+          fileField: 'file',
+          fileBytes: bytes,
+          filename: filename,
+          fileMimeType: mimeType,
+        ) as Map,
       );
 
   Future<Map<String, dynamic>> switchProfile(String profile) async =>

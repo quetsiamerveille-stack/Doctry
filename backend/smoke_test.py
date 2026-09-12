@@ -573,9 +573,34 @@ with TestClient(app) as client:
     )
     check("retour vers Propriétaire", switch_back.json()["active_profile"] == "owner", switch_back.text)
 
-    profile = client.patch(
+    # Refus sans le mot de passe actuel
+    refused = client.patch(
         "/api/auth/me",
         json={"first_name": "Alain-Roger", "password": "NewOwner!2026"},
+        headers=owner_headers,
+    )
+    check("changement mdp refusé sans mot de passe actuel", refused.status_code == 400, refused.text)
+
+    # Mauvais mot de passe actuel
+    wrong = client.patch(
+        "/api/auth/me",
+        json={
+            "first_name": "Alain-Roger",
+            "password": "NewOwner!2026",
+            "current_password": "FauxMotDePasse!1",
+        },
+        headers=owner_headers,
+    )
+    check("changement mdp refusé si mot de passe actuel faux", wrong.status_code == 400, wrong.text)
+
+    # Changement valide avec le mot de passe actuel correct
+    profile = client.patch(
+        "/api/auth/me",
+        json={
+            "first_name": "Alain-Roger",
+            "password": "NewOwner!2026",
+            "current_password": "Owner!2026",
+        },
         headers=owner_headers,
     )
     check("modification du profil", profile.json()["first_name"] == "Alain-Roger", profile.text)
@@ -585,6 +610,13 @@ with TestClient(app) as client:
         json={"profile": "owner", "email": "alain@doctry.app", "password": "NewOwner!2026"},
     )
     check("connexion avec le nouveau mot de passe", relogin.status_code == 200, relogin.text)
+
+    # Ancien mot de passe refuse apres changement
+    old_login = client.post(
+        "/api/auth/login",
+        json={"profile": "owner", "email": "alain@doctry.app", "password": "Owner!2026"},
+    )
+    check("ancien mot de passe refusé", old_login.status_code in (401, 400), old_login.text)
 
 print("\n" + "=" * 60)
 print(f"RESULTAT : {PASS} succès, {FAIL} échecs")

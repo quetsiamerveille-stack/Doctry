@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -236,6 +236,17 @@ def update_profile(
     if payload.phone is not None:
         current_user.phone = payload.phone.strip()
     if payload.password:
+        # Securite : le mot de passe actuel est OBLIGATOIRE pour en changer
+        if not payload.current_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Saisissez votre mot de passe actuel pour le modifier.",
+            )
+        if not verify_password(payload.current_password, current_user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Mot de passe actuel incorrect.",
+            )
         current_user.password_hash = hash_password(payload.password)
     db.commit()
     db.refresh(current_user)
@@ -263,8 +274,61 @@ def update_admin_profile(
                 detail="Cette adresse email est déjà utilisée.",
             )
         current_user.email = email
+    if payload.password:
+        # Securite : le mot de passe actuel est OBLIGATOIRE pour en changer
+        if not payload.current_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Saisissez votre mot de passe actuel pour le modifier.",
+            )
+        if not verify_password(payload.current_password, current_user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Mot de passe actuel incorrect.",
+            )
+        current_user.password_hash = hash_password(payload.password)
     db.commit()
     db.refresh(current_user)
+    return UserOut.model_validate(current_user)
+
+
+@router.post("/me/photo", response_model=UserOut)
+async def upload_profile_photo(
+    file: UploadFile,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserOut:
+    """Photo de profil : JPG/PNG/WebP, max 5 Mo, servie via /api/media/profiles/{user_id}."""
+    allowed = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
+    content_type = (file.content_type or "").lower()
+    if content_type not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Format non supporté. Utilisez JPG, PNG ou WebP.",
+        )
+
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Fichier vide.")
+    if len(data) > 5 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Image trop lourde (5 Mo maximum).",
+        )
+
+    profiles_dir = settings.storage_path / "profiles"
+    profiles_dir.mkdir(parents=True, exist_ok=True)
+
+    # Suppression de l'ancienne photo (toutes extensions possibles)
+    for old in profiles_dir.glob(f"{current_user.id}.*"):
+        old.unlink(missing_ok=True)
+
+    extension = allowed[content_type]
+    file_path = profiles_dir / f"{current_user.id}.{extension}"
+    file_path.write_bytes(data)
+
+    current_user.profile_photo = str(file_path)
+    db.commit()
     return UserOut.model_validate(current_user)
 
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../config/api_config.dart';
 
@@ -93,6 +94,7 @@ class ApiClient {
     String? fileField,
     List<int>? fileBytes,
     String? filename,
+    String? fileMimeType,
   }) {
     return _send(() async {
       final http.MultipartRequest request =
@@ -104,6 +106,9 @@ class ApiClient {
             fileField,
             fileBytes,
             filename: filename ?? 'upload.jpg',
+            contentType: fileMimeType == null
+                ? null
+                : MediaType.parse(fileMimeType),
           ),
         );
       }

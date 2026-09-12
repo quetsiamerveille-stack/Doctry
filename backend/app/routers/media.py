@@ -115,6 +115,26 @@ def find_image(
     return _image_response(find.image_file)
 
 
+@router.get("/api/media/profiles/{user_id}")
+def profile_photo(
+    user_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> FileResponse:
+    """Photo de profil d'un utilisateur (authentifie requis, anti-enum)."""
+    user = require_user(request, db)
+    target = db.get(User, user_id)
+    if target is None or not target.profile_photo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo de profil introuvable.")
+    path = Path(target.profile_photo)
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Photo de profil introuvable.")
+    # Seul le proprietaire de la photo (ou un admin) peut la voir en pleine taille
+    if target.id != user.id and not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Accès refusé.")
+    return FileResponse(str(path))
+
+
 @router.get("/api/media/finds/{find_id}/blurred")
 def find_blurred(
     find_id: str,

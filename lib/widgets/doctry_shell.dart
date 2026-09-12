@@ -8,6 +8,7 @@ import '../providers/admin_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/workspace_provider.dart';
 import 'dialogs.dart';
+import 'user_avatar.dart';
 
 class ShellNavItem {
   const ShellNavItem({required this.label, required this.icon, required this.page});
@@ -292,6 +293,7 @@ class _TopBar extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 _ProfileMenu(
+                  user: user,
                   name: name,
                   subtitle: subtitle,
                   isAdminProfile: isAdminProfile,
@@ -329,6 +331,7 @@ class _TopBar extends StatelessWidget {
 
 class _ProfileMenu extends StatelessWidget {
   const _ProfileMenu({
+    required this.user,
     required this.name,
     required this.subtitle,
     required this.isAdminProfile,
@@ -339,6 +342,7 @@ class _ProfileMenu extends StatelessWidget {
     required this.onLogout,
   });
 
+  final AppUser? user;
   final String name;
   final String subtitle;
   final bool isAdminProfile;
@@ -413,18 +417,21 @@ class _ProfileMenu extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            CircleAvatar(
-              radius: 19,
-              backgroundColor: AppColors.gold,
-              child: Text(
-                Fmt.initials(name),
-                style: const TextStyle(
-                  color: AppColors.darkBlue,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
+            if (user != null)
+              UserAvatar(user: user!, size: 38)
+            else
+              CircleAvatar(
+                radius: 19,
+                backgroundColor: AppColors.gold,
+                child: Text(
+                  Fmt.initials(name),
+                  style: const TextStyle(
+                    color: AppColors.darkBlue,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
                 ),
               ),
-            ),
             const SizedBox(width: 10),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 170),

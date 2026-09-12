@@ -2,10 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
 class PickedMedia {
-  const PickedMedia({required this.bytes, required this.filename});
+  const PickedMedia({required this.bytes, required this.filename, required this.mimeType});
 
   final List<int> bytes;
   final String filename;
+  final String mimeType;
 }
 
 class MediaPicker {
@@ -24,7 +25,22 @@ class MediaPicker {
       return null;
     }
     final Uint8List bytes = await file.readAsBytes();
-    return PickedMedia(bytes: bytes, filename: _safeName(file.name));
+    return PickedMedia(
+      bytes: bytes,
+      filename: _safeName(file.name),
+      mimeType: _mimeFor(_safeName(file.name)),
+    );
+  }
+
+  static String _mimeFor(String filename) {
+    final String lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) {
+      return 'image/png';
+    }
+    if (lower.endsWith('.webp')) {
+      return 'image/webp';
+    }
+    return 'image/jpeg';
   }
 
   static String _safeName(String value) {
@@ -38,6 +54,13 @@ class MediaPicker {
     }
     final String extension = name.substring(dot).toLowerCase();
     const List<String> allowed = <String>['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
-    return allowed.contains(extension) ? name : '${name.substring(0, dot)}.jpg';
+    if (!allowed.contains(extension)) {
+      return '${name.substring(0, dot)}.jpg';
+    }
+    if (extension == '.bmp') {
+      // Le backend n'accepte pas le BMP : on renomme en jpg par precaution.
+      return '${name.substring(0, dot)}.jpg';
+    }
+    return name;
   }
 }

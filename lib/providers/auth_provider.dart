@@ -76,6 +76,12 @@ class AuthProvider extends ChangeNotifier {
   OtpChallenge? get challenge => _challenge;
   bool get busy => _busy;
   String? get error => _error;
+
+  /// Erreur de validation cote client (sans appel serveur).
+  void setValidationError(String message) {
+    _error = message;
+    notifyListeners();
+  }
   String? get info => _info;
   bool get ratingDue => _ratingDue;
   int get ratingIntervalDays => _ratingIntervalDays;
@@ -363,10 +369,15 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// URL chargeable de la photo de profil d'un utilisateur (avec token).
+  String profilePhotoUrl(String userId) =>
+      _api.client.mediaUrl('/api/media/profiles/$userId');
+
   Future<bool> updateProfile({
     String? firstName,
     String? lastName,
     String? password,
+    String? currentPassword,
     String? phone,
   }) {
     return _safe(() async {
@@ -374,6 +385,7 @@ class AuthProvider extends ChangeNotifier {
         firstName: firstName,
         lastName: lastName,
         password: password,
+        currentPassword: currentPassword,
         phone: phone,
       );
       _user = AppUser.fromJson(payload);
@@ -383,16 +395,42 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
-  Future<bool> updateAdminProfile({String? firstName, String? lastName, String? email}) {
+  Future<bool> updateAdminProfile({
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? password,
+    String? currentPassword,
+  }) {
     return _safe(() async {
       final Map<String, dynamic> payload = await _api.updateAdminProfile(
         firstName: firstName,
         lastName: lastName,
         email: email,
+        password: password,
+        currentPassword: currentPassword,
       );
       _user = AppUser.fromJson(payload);
       await _persist();
       _info = 'Profil administrateur mis à jour.';
+      return true;
+    });
+  }
+
+  Future<bool> uploadProfilePhoto({
+    required List<int> bytes,
+    required String filename,
+    required String mimeType,
+  }) {
+    return _safe(() async {
+      final Map<String, dynamic> payload = await _api.uploadProfilePhoto(
+        bytes: bytes,
+        filename: filename,
+        mimeType: mimeType,
+      );
+      _user = AppUser.fromJson(payload);
+      await _persist();
+      _info = 'Photo de profil mise à jour.';
       return true;
     });
   }

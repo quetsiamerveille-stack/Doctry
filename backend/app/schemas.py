@@ -69,6 +69,7 @@ class ProfileUpdateIn(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     password: str | None = Field(default=None, min_length=6)
+    current_password: str | None = None
     phone: str | None = None
 
 
@@ -76,6 +77,8 @@ class AdminProfileUpdateIn(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=6)
+    current_password: str | None = None
 
 
 class ProfileSwitchIn(BaseModel):
