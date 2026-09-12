@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId = "com.doctry.app"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
