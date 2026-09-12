@@ -60,3 +60,4 @@ build_apk_online.ps1
 build_apk.ps1
 download_gradle.ps1
 install_ndk.ps1
+DOCTRY-v1.0.0-online.apk
