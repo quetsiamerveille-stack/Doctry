@@ -66,3 +66,4 @@ DOCTRY-v1.0.0-online.apk
 
 # Exception: le build web Flutter est livre au repo pour le deploiement Render
 !build/web/
+generate_icons.ps1
