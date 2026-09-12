@@ -49,3 +49,8 @@ android/build/
 
 # Runtime server state
 .server_pids
+
+# APK de livraison
+DOCTRY-v1.0.0.apk
+apk_build.log
+apk_build.exit
