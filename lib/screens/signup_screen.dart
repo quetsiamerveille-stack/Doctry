@@ -170,40 +170,45 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _password,
-                      obscureText: _obscure,
-                      decoration: InputDecoration(
-                        labelText: 'Mot de passe',
-                        helperText: auth.useSupabaseOtp
-                            ? '6 caractères minimum · un code de vérification sera envoyé par email'
-                            : '6 caractères minimum',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: AppColors.grey,
+                    if (!auth.useSupabaseOtp) ...<Widget>[
+                      TextFormField(
+                        controller: _password,
+                        obscureText: _obscure,
+                        decoration: InputDecoration(
+                          labelText: 'Mot de passe',
+                          helperText: '6 caractères minimum',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            onPressed: () => setState(() => _obscure = !_obscure),
+                            icon: Icon(
+                              _obscure
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: AppColors.grey,
+                            ),
                           ),
                         ),
+                        validator: (String? value) =>
+                            (value ?? '').length < 6 ? '6 caractères minimum.' : null,
                       ),
-                      validator: (String? value) =>
-                          (value ?? '').length < 6 ? '6 caractères minimum.' : null,
-                    ),
-                    const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _confirm,
-                      obscureText: _obscure,
-                      onFieldSubmitted: (_) => _submit(),
-                      decoration: const InputDecoration(
-                        labelText: 'Confirmer le mot de passe',
-                        prefixIcon: Icon(Icons.lock_reset_outlined),
+                      const SizedBox(height: 14),
+                      TextFormField(
+                        controller: _confirm,
+                        obscureText: _obscure,
+                        onFieldSubmitted: (_) => _submit(),
+                        decoration: const InputDecoration(
+                          labelText: 'Confirmer le mot de passe',
+                          prefixIcon: Icon(Icons.lock_reset_outlined),
+                        ),
+                        validator: (String? value) =>
+                            value != _password.text ? 'Les mots de passe diffèrent.' : null,
                       ),
-                      validator: (String? value) =>
-                          value != _password.text ? 'Les mots de passe diffèrent.' : null,
-                    ),
+                    ],
+                    if (auth.useSupabaseOtp)
+                      const Text(
+                        'Sans mot de passe : vous recevrez un code de vérification par email.',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
                     if (auth.error != null) ...<Widget>[
                       const SizedBox(height: 14),
                       Container(

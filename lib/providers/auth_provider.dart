@@ -237,9 +237,20 @@ class AuthProvider extends ChangeNotifier {
     String password = '',
   }) {
     return _safe(() async {
-      // Mot de passe = 1er facteur verifie par le backend; le challenge recoit
-      // soit un ticket local (SMTP/simulation), soit delivery=supabase (2e facteur).
-      _challenge = await _api.login(profile: profile, email: email, password: password);
+      if (useSupabaseOtp) {
+        final OtpChallenge sent = await _api.requestOtp(email: email);
+        _challenge = OtpChallenge(
+          ticket: '',
+          email: sent.email,
+          delivery: sent.delivery,
+          devCode: '',
+          expiresIn: sent.expiresIn,
+          profile: profile,
+          isAdmin: false,
+        );
+      } else {
+        _challenge = await _api.login(profile: profile, email: email, password: password);
+      }
       _status = AuthStatus.otpPending;
       _info = _challenge!.isSimulated
           ? 'Simulation email : le code OTP est ${_challenge!.devCode}.'
@@ -257,14 +268,33 @@ class AuthProvider extends ChangeNotifier {
     String phone = '',
   }) {
     return _safe(() async {
-      _challenge = await _api.signup(
-        profile: profile,
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        password: password,
-        phone: phone,
-      );
+      if (useSupabaseOtp) {
+        final OtpChallenge sent = await _api.requestOtp(
+          email: email,
+          firstName: firstName,
+          lastName: lastName,
+          phone: phone,
+          profile: profile,
+        );
+        _challenge = OtpChallenge(
+          ticket: '',
+          email: sent.email,
+          delivery: sent.delivery,
+          devCode: '',
+          expiresIn: sent.expiresIn,
+          profile: profile,
+          isAdmin: false,
+        );
+      } else {
+        _challenge = await _api.signup(
+          profile: profile,
+          firstName: firstName,
+          lastName: lastName,
+          email: email,
+          password: password,
+          phone: phone,
+        );
+      }
       _status = AuthStatus.otpPending;
       _info = _challenge!.isSimulated
           ? 'Compte créé. Simulation email : le code OTP est ${_challenge!.devCode}.'
@@ -326,7 +356,6 @@ class AuthProvider extends ChangeNotifier {
       final Map<String, dynamic> payload = await _api.verifyOtp(
         ticket: current.ticket,
         email: current.ticket.isEmpty ? current.email : '',
-        profile: current.ticket.isEmpty ? current.profile : '',
         code: code.trim(),
       );
       _applyTokenPayload(payload);

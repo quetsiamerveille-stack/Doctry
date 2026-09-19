@@ -61,17 +61,21 @@ class OtpRequestIn(BaseModel):
 
 
 class OtpSendIn(BaseModel):
-    """Renvoi du code OTP 2e facteur (compte existant uniquement, mot de passe
-    deja verifie par l'appel precedent)."""
+    """OTP envoye par Supabase Auth (flux sans mot de passe). Les champs
+    first_name/last_name/profile/phone ne sont requis qu'a la premiere connexion
+    (creation automatique du compte)."""
 
     email: EmailStr
+    first_name: str = ""
+    last_name: str = ""
+    phone: str = ""
+    profile: str = Field(default="", pattern="^(|finder|owner)$")
 
 
 class OtpVerifyIn(BaseModel):
     ticket: str = ""
     code: str
     email: EmailStr | None = None
-    profile: str = Field(default="", pattern="^(|finder|owner|admin)$")
 
 
 class ProfileUpdateIn(BaseModel):
