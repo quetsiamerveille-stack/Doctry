@@ -14,7 +14,7 @@ from pathlib import Path
 BACKEND_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(BACKEND_ROOT))
 
-from sqlalchemy import text  # noqa: E402
+from sqlalchemy import inspect, text  # noqa: E402
 
 from app.database import engine  # noqa: E402
 
@@ -23,10 +23,40 @@ MIGRATIONS: list[tuple[str, str, str]] = [
     ("otp_codes", "context_ref", "VARCHAR(255)"),
 ]
 
+# (table, colonne, type) - ajout idempotent de nouvelles colonnes
+ADD_COLUMNS: list[tuple[str, str, str]] = [
+    ("users", "supabase_user_id", "VARCHAR(36)"),
+]
+
+
+def add_missing_columns() -> int:
+    applied = 0
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table, column, column_type in ADD_COLUMNS:
+            existing = {c["name"] for c in inspector.get_columns(table)}
+            if column in existing:
+                print(f"[=] {table}.{column} : deja presente")
+                continue
+            conn.execute(text(f'ALTER TABLE "{table}" ADD COLUMN "{column}" {column_type}'))
+            print(f"[OK] {table}.{column} : ajoutee ({column_type})")
+            applied += 1
+        conn.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_supabase_user_id "
+                "ON users (supabase_user_id)"
+            )
+        )
+    return applied
+
 
 def main() -> int:
     print(f"Cible: {engine.url.host}")
-    applied = 0
+    applied = add_missing_columns()
+    if engine.dialect.name != "postgresql":
+        print("[=] ajustements VARCHAR ignores (PostgreSQL uniquement)")
+        print(f"\n{applied} migration(s) appliquee(s).")
+        return 0
     with engine.begin() as conn:
         for table, column, new_type in MIGRATIONS:
             current = conn.execute(

@@ -42,6 +42,7 @@ class User(Base, TimestampMixin):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    supabase_user_id: Mapped[str | None] = mapped_column(String(36), unique=True, nullable=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     first_name: Mapped[str] = mapped_column(String(120), default="")
     last_name: Mapped[str] = mapped_column(String(120), default="")

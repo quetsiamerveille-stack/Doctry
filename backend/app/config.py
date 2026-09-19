@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     deepseek_timeout: int = 180
     matching_threshold: float = 0.55
 
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
@@ -88,6 +91,10 @@ class Settings(BaseSettings):
     @property
     def deepseek_enabled(self) -> bool:
         return bool(self.deepseek_api_key.strip())
+
+    @property
+    def supabase_auth_enabled(self) -> bool:
+        return bool(self.supabase_url.strip() and self.supabase_anon_key.strip())
 
     @property
     def smtp_enabled(self) -> bool:

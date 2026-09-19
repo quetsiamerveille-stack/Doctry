@@ -22,6 +22,10 @@ services:
         value: "*"                   # TODO: remplacer par l'URL Vercel finale
       - key: DATABASE_URL
         sync: false                  # a renseigner dans le dashboard (secret)
+      - key: SUPABASE_URL
+        sync: false                  # ex: https://rbujewoocraoacrbjchy.supabase.co
+      - key: SUPABASE_ANON_KEY
+        sync: false                  # cle publique anon (secret dashboard)
       - key: DEEPSEEK_API_KEY
         sync: false                  # a renseigner dans le dashboard (secret)
       - key: DEEPSEEK_BASE_URL

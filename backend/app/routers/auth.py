@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 from datetime import datetime, timezone
 from typing import Any
 
@@ -18,6 +19,7 @@ from ..schemas import (
     AdminProfileUpdateIn,
     InstallStatus,
     LoginIn,
+    OtpSendIn,
     OtpVerifyIn,
     ProfileSwitchIn,
     ProfileUpdateIn,
@@ -26,14 +28,20 @@ from ..schemas import (
     UserOut,
 )
 from ..security import create_access_token, hash_password, verify_password
-from ..services import deepseek_service, otp_service
+from ..services import deepseek_service, otp_service, supabase_auth_service
 from ..services.otp_service import OtpError
+from ..services.supabase_auth_service import SupabaseAuthError
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 def _delivery_modes() -> tuple[str, str, str]:
-    email_mode = "smtp" if settings.smtp_enabled else "simulation"
+    if settings.supabase_auth_enabled:
+        email_mode = "supabase"
+    elif settings.smtp_enabled:
+        email_mode = "smtp"
+    else:
+        email_mode = "simulation"
     sms_mode = "textsoft" if settings.sms_enabled else "simulation"
     ai_mode = "ia-nemotron" if deepseek_service.is_available() else "moteur-local"
     return email_mode, sms_mode, ai_mode
@@ -172,19 +180,110 @@ def admin_login(payload: AdminLoginIn, db: Session = Depends(get_db)) -> dict[st
     return _otp_challenge(db, user, "admin", "admin")
 
 
+@router.post("/otp/send")
+def send_otp_via_supabase(payload: OtpSendIn, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Envoi du code OTP par Supabase Auth (le backend ne fait que relayer la demande).
+
+    Si le compte est inconnu, GoTrue le cree avec les metadonnees fournies
+    (premiere connexion = inscription sans mot de passe).
+    """
+    if not settings.supabase_auth_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Authentification Supabase non configuree (SUPABASE_URL / SUPABASE_ANON_KEY).",
+        )
+    email = payload.email.lower()
+    data: dict[str, Any] = {}
+    if payload.first_name or payload.last_name or payload.profile:
+        data = {
+            "first_name": payload.first_name.strip(),
+            "last_name": payload.last_name.strip(),
+            "phone": payload.phone.strip(),
+            "profile": payload.profile or "owner",
+        }
+    try:
+        supabase_auth_service.send_email_otp(email, data or None)
+    except SupabaseAuthError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+    return {
+        "requires_otp": True,
+        "email": email,
+        "delivery": "supabase",
+        "expires_in": settings.otp_ttl_seconds,
+        "dev_code": "",
+    }
+
+
+def _link_or_provision(db: Session, remote_user: dict[str, Any]) -> User:
+    uid = str(remote_user.get("id") or "")
+    email = str(remote_user.get("email") or "").lower()
+    if not uid or not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Reponse Supabase Auth incomplete (id/email absents).",
+        )
+    user = db.query(User).filter(User.supabase_user_id == uid).first()
+    if user is None:
+        # Compte DOCTRY historique : lien automatique par email.
+        user = db.query(User).filter(User.email == email).first()
+    if user is None:
+        meta = remote_user.get("user_metadata") or {}
+        profile = str(meta.get("profile") or "owner")
+        if profile not in ("finder", "owner"):
+            profile = "owner"
+        user = User(
+            email=email,
+            password_hash=hash_password(secrets.token_urlsafe(24)),
+            first_name=str(meta.get("first_name") or "").strip(),
+            last_name=str(meta.get("last_name") or "").strip(),
+            phone=str(meta.get("phone") or "").strip(),
+            role=profile,
+            active_profile=profile,
+            supabase_user_id=uid,
+        )
+        db.add(user)
+    else:
+        user.supabase_user_id = uid
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 @router.post("/otp/verify", response_model=TokenPayload)
 def verify_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> TokenPayload:
-    try:
-        record = otp_service.verify_otp(db, payload.ticket, payload.code)
-    except OtpError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    profile = ""
+    if payload.ticket:
+        try:
+            record = otp_service.verify_otp(db, payload.ticket, payload.code)
+        except OtpError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+        try:
+            context = json.loads(record.context_ref or "{}")
+        except json.JSONDecodeError:
+            context = {}
+        uid = str(context.get("uid", ""))
+        user = db.get(User, uid)
+        profile = str(context.get("profile") or "")
+    else:
+        if not payload.email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Ticket OTP ou email requis.",
+            )
+        if not settings.supabase_auth_enabled:
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="Authentification Supabase non configuree (SUPABASE_URL / SUPABASE_ANON_KEY).",
+            )
+        try:
+            remote_user = supabase_auth_service.verify_email_otp(payload.email.lower(), payload.code)
+        except SupabaseAuthError as exc:
+            raise HTTPException(
+                status_code=exc.status_code if exc.status_code >= 400 else 400,
+                detail=exc.message,
+            ) from exc
+        user = _link_or_provision(db, remote_user)
 
-    try:
-        context = json.loads(record.context_ref or "{}")
-    except json.JSONDecodeError:
-        context = {}
-
-    user = db.get(User, str(context.get("uid", "")))
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -195,8 +294,12 @@ def verify_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> TokenPayl
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Votre compte est bloqué. Contactez l'administrateur.",
         )
+    if user.is_admin and not profile:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Utilisez la section administrateur pour ce compte.",
+        )
 
-    profile = str(context.get("profile") or user.active_profile)
     if user.is_admin:
         profile = "admin"
     elif profile not in ("finder", "owner"):
