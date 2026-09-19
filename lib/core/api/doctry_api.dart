@@ -29,7 +29,7 @@ class OtpChallenge {
   final String profile;
   final bool isAdmin;
 
-  bool get isSimulated => delivery != 'sent';
+  bool get isSimulated => delivery == 'simulation';
 }
 
 class DoctryApi {
@@ -105,11 +105,35 @@ class DoctryApi {
     return OtpChallenge.fromJson(Map<String, dynamic>.from(result as Map));
   }
 
-  Future<Map<String, dynamic>> verifyOtp({required String ticket, required String code}) async =>
+  /// Code OTP envoye par Supabase Auth (flux sans mot de passe). Les champs
+  /// nom/profil ne servent qu'a la premiere connexion (creation du compte).
+  Future<OtpChallenge> requestOtp({
+    required String email,
+    String firstName = '',
+    String lastName = '',
+    String phone = '',
+    String profile = '',
+  }) async {
+    final dynamic result = await _client.post('/api/auth/otp/send', body: <String, dynamic>{
+      'email': email,
+      if (firstName.isNotEmpty) 'first_name': firstName,
+      if (lastName.isNotEmpty) 'last_name': lastName,
+      if (phone.isNotEmpty) 'phone': phone,
+      if (profile.isNotEmpty) 'profile': profile,
+    });
+    return OtpChallenge.fromJson(Map<String, dynamic>.from(result as Map));
+  }
+
+  Future<Map<String, dynamic>> verifyOtp({
+    String ticket = '',
+    String email = '',
+    required String code,
+  }) async =>
       Map<String, dynamic>.from(
         await _client.post('/api/auth/otp/verify', body: <String, dynamic>{
           'ticket': ticket,
           'code': code,
+          if (email.isNotEmpty) 'email': email,
         }) as Map,
       );
 
