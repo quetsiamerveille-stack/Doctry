@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import secrets
 from datetime import datetime, timezone
 from typing import Any
 
@@ -48,6 +47,23 @@ def _delivery_modes() -> tuple[str, str, str]:
 
 
 def _otp_challenge(db: Session, user: User, purpose: str, profile: str) -> dict[str, Any]:
+    if settings.supabase_auth_enabled:
+        # 2e facteur : Supabase Auth envoie le code par email; le mot de passe
+        # (1er facteur) a deja ete verifie par l'appelant.
+        try:
+            supabase_auth_service.send_email_otp(user.email)
+        except SupabaseAuthError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
+        return {
+            "requires_otp": True,
+            "email": user.email,
+            "ticket": "",
+            "delivery": "supabase",
+            "dev_code": "",
+            "expires_in": settings.otp_ttl_seconds,
+            "profile": profile,
+            "is_admin": user.is_admin,
+        }
     context = json.dumps({"uid": user.id, "profile": profile, "purpose": purpose})
     result = otp_service.issue_otp(db, user.email, purpose, context)
     return {
@@ -182,39 +198,21 @@ def admin_login(payload: AdminLoginIn, db: Session = Depends(get_db)) -> dict[st
 
 @router.post("/otp/send")
 def send_otp_via_supabase(payload: OtpSendIn, db: Session = Depends(get_db)) -> dict[str, Any]:
-    """Envoi du code OTP par Supabase Auth (le backend ne fait que relayer la demande).
-
-    Si le compte est inconnu, GoTrue le cree avec les metadonnees fournies
-    (premiere connexion = inscription sans mot de passe).
-    """
+    """Renvoi du code OTP (2e facteur) pour un compte existant, envoye par Supabase Auth."""
     if not settings.supabase_auth_enabled:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
             detail="Authentification Supabase non configuree (SUPABASE_URL / SUPABASE_ANON_KEY).",
         )
-    email = payload.email.lower()
-    data: dict[str, Any] = {}
-    if payload.first_name or payload.last_name or payload.profile:
-        data = {
-            "first_name": payload.first_name.strip(),
-            "last_name": payload.last_name.strip(),
-            "phone": payload.phone.strip(),
-            "profile": payload.profile or "owner",
-        }
-    try:
-        supabase_auth_service.send_email_otp(email, data or None)
-    except SupabaseAuthError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.message) from exc
-    return {
-        "requires_otp": True,
-        "email": email,
-        "delivery": "supabase",
-        "expires_in": settings.otp_ttl_seconds,
-        "dev_code": "",
-    }
+    user = db.query(User).filter(User.email == payload.email.lower()).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Compte introuvable.")
+    purpose = "admin" if user.is_admin else "login"
+    profile = "admin" if user.is_admin else user.active_profile
+    return _otp_challenge(db, user, purpose, profile)
 
 
-def _link_or_provision(db: Session, remote_user: dict[str, Any]) -> User:
+def _link_supabase_user(db: Session, remote_user: dict[str, Any]) -> User:
     uid = str(remote_user.get("id") or "")
     email = str(remote_user.get("email") or "").lower()
     if not uid or not email:
@@ -227,23 +225,12 @@ def _link_or_provision(db: Session, remote_user: dict[str, Any]) -> User:
         # Compte DOCTRY historique : lien automatique par email.
         user = db.query(User).filter(User.email == email).first()
     if user is None:
-        meta = remote_user.get("user_metadata") or {}
-        profile = str(meta.get("profile") or "owner")
-        if profile not in ("finder", "owner"):
-            profile = "owner"
-        user = User(
-            email=email,
-            password_hash=hash_password(secrets.token_urlsafe(24)),
-            first_name=str(meta.get("first_name") or "").strip(),
-            last_name=str(meta.get("last_name") or "").strip(),
-            phone=str(meta.get("phone") or "").strip(),
-            role=profile,
-            active_profile=profile,
-            supabase_user_id=uid,
+        # Le compte local ne peut etre cree que via /signup (mot de passe requis).
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Compte DOCTRY introuvable. Inscrivez-vous d'abord.",
         )
-        db.add(user)
-    else:
-        user.supabase_user_id = uid
+    user.supabase_user_id = uid
     db.commit()
     db.refresh(user)
     return user
@@ -282,7 +269,8 @@ def verify_otp(payload: OtpVerifyIn, db: Session = Depends(get_db)) -> TokenPayl
                 status_code=exc.status_code if exc.status_code >= 400 else 400,
                 detail=exc.message,
             ) from exc
-        user = _link_or_provision(db, remote_user)
+        user = _link_supabase_user(db, remote_user)
+        profile = payload.profile
 
     if user is None:
         raise HTTPException(

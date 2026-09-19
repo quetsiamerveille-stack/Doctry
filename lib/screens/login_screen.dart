@@ -141,33 +141,28 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                         const SizedBox(height: 14),
-                        if (!auth.useSupabaseOtp) ...<Widget>[
-                          TextFormField(
-                            controller: _password,
-                            obscureText: _obscure,
-                            autofillHints: const <String>[AutofillHints.password],
-                            onFieldSubmitted: (_) => _submit(),
-                            decoration: InputDecoration(
-                              labelText: 'Mot de passe',
-                              prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: IconButton(
-                                onPressed: () => setState(() => _obscure = !_obscure),
-                                icon: Icon(
-                                  _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                                  color: AppColors.grey,
-                                ),
+                        TextFormField(
+                          controller: _password,
+                          obscureText: _obscure,
+                          autofillHints: const <String>[AutofillHints.password],
+                          onFieldSubmitted: (_) => _submit(),
+                          decoration: InputDecoration(
+                            labelText: 'Mot de passe',
+                            helperText: auth.useSupabaseOtp
+                                ? 'Puis un code de vérification par email'
+                                : null,
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              onPressed: () => setState(() => _obscure = !_obscure),
+                              icon: Icon(
+                                _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                color: AppColors.grey,
                               ),
                             ),
-                            validator: (String? value) =>
-                                (value ?? '').isEmpty ? 'Saisissez votre mot de passe.' : null,
                           ),
-                          const SizedBox(height: 14),
-                        ],
-                        if (auth.useSupabaseOtp)
-                          const Text(
-                            'Vous recevrez un code de vérification par email.',
-                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                          ),
+                          validator: (String? value) =>
+                              (value ?? '').isEmpty ? 'Saisissez votre mot de passe.' : null,
+                        ),
                         if (auth.error != null && !_adminSectionOpen) ...<Widget>[
                           const SizedBox(height: 12),
                           _ErrorBanner(message: auth.error!),
